@@ -1,7 +1,7 @@
 /*********************************************************
 **                                                      **
 **       Leaflet Plugin "Leaflet.PolylineMeasure"       **
-**       Version: 2020-08-12                            **
+**       Version: 2020-08-21                            **
 **                                                      **
 *********************************************************/
 
@@ -393,7 +393,7 @@
             var self = this
             const { options } = self
             // needed to avoid creating points by mouseclick during dragging the map
-            map.on('movestart ', function() { self._mapdragging = true })
+            map.on('movestart ', function() { self._mapdragging = false })
 
             if (options.isWithControlTrigger) {
                 this._container = document.getElementById(options.containerTriggerId)
@@ -513,11 +513,11 @@
         },
 
         _changeUnit: function() {
-            if (this.options.unit == 'metres') {
+            if (this.options.unit === 'metres') {
                 this.options.unit = 'landmiles'
                 document.getElementById('unitControlId').innerHTML = this.options.unitControlLabel.landmiles
                 this._unitControl.title = this.options.unitControlTitle.text + ' [' + this.options.unitControlTitle.landmiles + ']'
-            } else if (this.options.unit == 'landmiles') {
+            } else if (this.options.unit === 'landmiles') {
                 this.options.unit = 'nauticalmiles'
                 document.getElementById('unitControlId').innerHTML = this.options.unitControlLabel.nauticalmiles
                 this._unitControl.title = this.options.unitControlTitle.text + ' [' + this.options.unitControlTitle.nauticalmiles + ']'
@@ -718,10 +718,11 @@
                 var lng2 = p2.lng / 180 * Math.PI
                 var y = Math.sin(lng2 - lng1) * Math.cos(lat2)
                 var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lng2 - lng1)
+                let brng
                 if (direction === 'inbound') {
-                    var brng = (Math.atan2(y, x) * 180 / Math.PI + 180).toFixed(0)
+                    brng = (Math.atan2(y, x) * 180 / Math.PI + 180).toFixed(0)
                 } else {
-                    var brng = (Math.atan2(y, x) * 180 / Math.PI + 360).toFixed(0)
+                    brng = (Math.atan2(y, x) * 180 / Math.PI + 360).toFixed(0)
                 }
                 return (brng % 360)
             }
@@ -741,7 +742,7 @@
             currentTooltip._icon.innerHTML = textCurrent
             if ((this.options.showBearings === true) && (prevTooltip)) {
                 var textPrev = prevTooltip._icon.innerHTML
-                var regExp = new RegExp(this.options.bearingTextOut + '.*\°')
+                var regExp = new RegExp(this.options.bearingTextOut + '.*')
                 var textReplace = textPrev.replace(regExp, this.options.bearingTextOut + ': ' + angleOut + '°')
                 prevTooltip._icon.innerHTML = textReplace
             }
@@ -1020,7 +1021,7 @@
                     item.cntCircle = index
                 })
                 this._arrPolylines[lineNr].circleCoords.splice(arrowNr + 1, 0, e.latlng)
-                lineCoords = this._arrPolylines[lineNr].polylinePath.getLatLngs() // get Coords of each Point of the current Polyline
+                const lineCoords = this._arrPolylines[lineNr].polylinePath.getLatLngs() // get Coords of each Point of the current Polyline
                 var arc1 = this._polylineArc(this._arrPolylines[lineNr].circleCoords[arrowNr], e.latlng)
                 arc1.pop()
                 var arc2 = this._polylineArc(e.latlng, this._arrPolylines[lineNr].circleCoords[arrowNr + 2])
@@ -1128,6 +1129,11 @@
         },
 
         _resumeFirstpointMousemove: function(e) {
+            const mouseNewLat = e.latlng.lat
+            const mouseNewLng = e.latlng.lng
+            const latDifference = mouseNewLat - this._mouseStartingLat
+            const lngDifference = mouseNewLng - this._mouseStartingLng
+            const currentCircleCoords = L.latLng(this._circleStartingLat + latDifference, this._circleStartingLng + lngDifference)
             var lineNr = this._lineNr
             this._map.on('click', this._resumeFirstpointClick, this) // necassary for _dragCircle. If switched on already within _dragCircle an unwanted click is fired at the end of the drag.
             var mouseCoords = e.latlng
@@ -1154,6 +1160,12 @@
         },
 
         _resumeFirstpointClick: function(e) {
+            const mouseNewLat = e.latlng.lat
+            const mouseNewLng = e.latlng.lng
+            const latDifference = mouseNewLat - this._mouseStartingLat
+            const lngDifference = mouseNewLng - this._mouseStartingLng
+            const currentCircleCoords = L.latLng(this._circleStartingLat + latDifference, this._circleStartingLng + lngDifference)
+
             var lineNr = this._lineNr
             this._resumeFirstpointFlag = false
             this._map.off('mousemove', this._resumeFirstpointMousemove, this)
@@ -1187,6 +1199,7 @@
 
         // not just used for dragging Cirles but also for deleting circles and resuming line at its starting point.
         _dragCircle: function(e1) {
+            let currentCircleCoords
             var arcpoints = this._arcpoints
             if (e1.originalEvent.ctrlKey) { // if user wants to resume drawing a line
                 this._map.off('click', this._mouseClick, this) // to avoid unwanted creation of a new line if CTRL-clicked onto a point
@@ -1229,7 +1242,7 @@
             // if user wants to delete a circle
             if (e1.originalEvent.shiftKey) { // it's not possible to use "ALT-Key" instead, cause this won't work in some Linux distributions (there it's the default hotkey for moving windows)
                 this._lineNr = e1.target.cntLine
-                var lineNr = this._lineNr
+                const lineNr = this._lineNr
                 this._circleNr = e1.target.cntCircle
                 var circleNr = this._circleNr
 
@@ -1278,7 +1291,7 @@
                         this._arrPolylines[lineNr].circleMarkers[0].bindTooltip(this.options.tooltipTextMove + this.options.tooltipTextDelete + this.options.tooltipTextResume, { direction: 'top', opacity: 0.7, className: 'polyline-measure-popupTooltip' })
                         this._arrPolylines[lineNr].arrowMarkers[circleNr].removeFrom(this._layerPaint)
                         this._arrPolylines[lineNr].arrowMarkers.splice(0, 1)
-                        var text = ''
+                        let text = ''
                         if (this.options.showBearings === true) {
                             text = this.options.bearingTextIn + ':---°<br>' + this.options.bearingTextOut + ':---°'
                         }
@@ -1296,7 +1309,7 @@
                         this._arrPolylines[lineNr].arrowMarkers.splice(-1, 1)
                         // if intermediate Circle is being removed
                     } else {
-                        newLineSegment = this._polylineArc(this._arrPolylines[lineNr].circleCoords[circleNr - 1], this._arrPolylines[lineNr].circleCoords[circleNr])
+                        const newLineSegment = this._polylineArc(this._arrPolylines[lineNr].circleCoords[circleNr - 1], this._arrPolylines[lineNr].circleCoords[circleNr])
                         Array.prototype.splice.apply(lineCoords, [(circleNr - 1) * (arcpoints - 1), (2 * arcpoints - 1)].concat(newLineSegment))
                         this._arrPolylines[lineNr].arrowMarkers[circleNr - 1].removeFrom(this._layerPaint)
                         this._arrPolylines[lineNr].arrowMarkers[circleNr].removeFrom(this._layerPaint)
@@ -1351,7 +1364,7 @@
                         this._currentLine.circleMarkers[0].bindTooltip(this.options.tooltipTextMove + this.options.tooltipTextDelete + this.options.tooltipTextResume, { direction: 'top', opacity: 0.7, className: 'polyline-measure-popupTooltip' })
                         this._currentLine.arrowMarkers[circleNr].removeFrom(this._layerPaint)
                         this._currentLine.arrowMarkers.splice(0, 1)
-                        var text = ''
+                        let text = ''
                         if (this.options.showBearings === true) {
                             text = this.options.bearingTextIn + ':---°<br>' + this.options.bearingTextOut + ':---°'
                         }
@@ -1369,7 +1382,7 @@
                         this._currentLine.arrowMarkers.splice(-1, 1)
                         // if intermediate Circle is being removed
                     } else {
-                        newLineSegment = this._polylineArc(this._currentLine.circleCoords[circleNr - 1], this._currentLine.circleCoords[circleNr])
+                        const newLineSegment = this._polylineArc(this._currentLine.circleCoords[circleNr - 1], this._currentLine.circleCoords[circleNr])
                         Array.prototype.splice.apply(lineCoords, [(circleNr - 1) * (arcpoints - 1), (2 * arcpoints - 1)].concat(newLineSegment))
                         this._currentLine.arrowMarkers[circleNr - 1].removeFrom(this._layerPaint)
                         this._currentLine.arrowMarkers[circleNr].removeFrom(this._layerPaint)
