@@ -581,6 +581,8 @@
                 } else { // if drawing a line, ESC will finish the current line
                     this._finishPolylinePath(e)
                 }
+
+                this._map.fire('polylinemeasure:pressedESC', { sttus: this._measuring })
             }
         },
 
