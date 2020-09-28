@@ -365,7 +365,7 @@
          * @private
          */
         _createControl: function(label, title, classesToAdd, container, fn, context) {
-            const { options } = context.options
+            const options = context.options.options || null
 
             if (options && options.isWithControlTrigger) {
                 const element = document.getElementById(options.controlTriggerId)
@@ -391,7 +391,7 @@
          */
         onAdd: function(map) {
             var self = this
-            const { options } = self
+            const options = self.options || null
             // needed to avoid creating points by mouseclick during dragging the map
             map.on('movestart ', function() { self._mapdragging = false })
 
